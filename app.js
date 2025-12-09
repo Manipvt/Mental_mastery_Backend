@@ -44,8 +44,23 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
+// Test database connection
+const testDbConnection = async () => {
+  try {
+    const client = await pool.connect();
+    await client.query('SELECT NOW()');
+    client.release();
+    logger.info('Database connection established successfully');
+  } catch (error) {
+    logger.error('Database connection failed:', error.message);
+    logger.error('Full error:', error);
+    process.exit(1);
+  }
+};
+
+const server = app.listen(PORT, async () => {
   logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  await testDbConnection();
 });
 
 // Handle unhandled promise rejections

@@ -4,7 +4,7 @@ const {
   adminLogin,
   getMe,
   logout,
-} = require('../controllers/authController');
+} = require('../controllers/authControllers');
 const { protect } = require('../middlewares/auth');
 const { loginLimiter } = require('../middlewares/rateLimiter');
 const { studentLoginValidator, adminLoginValidator } = require('../validators/authValidator');
