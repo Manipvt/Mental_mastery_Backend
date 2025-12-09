@@ -3,12 +3,13 @@ const dotenv = require('dotenv');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cors = require('cors');
+
+// Load env vars FIRST
+dotenv.config({ path: './config/config.env' });
+
 const { pool } = require('./config/db');
 const logger = require('./config/logger');
 const errorHandler = require('./middlewares/error');
-
-// Load env vars
-dotenv.config({ path: './config/config.env' });
 
 const app = express();
 
@@ -54,6 +55,8 @@ const testDbConnection = async () => {
   } catch (error) {
     logger.error('Database connection failed:', error.message);
     logger.error('Full error:', error);
+    console.error('Database connection failed:', error.message);
+    console.error('Full error:', error);
     process.exit(1);
   }
 };

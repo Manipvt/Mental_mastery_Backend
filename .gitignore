@@ -26,3 +26,12 @@ dist-ssr
 node_modules/   # Logs
 jspm_packages/  # Optional npm cache directory
 bower_components/ # Bower dependency directory (deprecated)
+/config/config.env
+# Optional eslint cache
+.eslintcache
+# Optional stylelint cache
+.stylelintcache
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
