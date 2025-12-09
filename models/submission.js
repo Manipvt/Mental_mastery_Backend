@@ -3,10 +3,10 @@ const { query } = require('../config/db');
 class Submission {
   static async findById(id) {
     const result = await query(
-      `SELECT s.*, st.name as student_name, st.roll_number, 
+      `SELECT s.*, u.name as student_name, u.roll_number, 
               p.title as problem_title, a.title as assignment_title
        FROM submissions s
-       LEFT JOIN students st ON s.student_id = st.id
+       LEFT JOIN users u ON s.user_id = u.id
        LEFT JOIN problems p ON s.problem_id = p.id
        LEFT JOIN assignments a ON s.assignment_id = a.id
        WHERE s.id = $1`,
@@ -18,7 +18,7 @@ class Submission {
   static async findByStudentAndProblem(studentId, problemId) {
     const result = await query(
       `SELECT * FROM submissions 
-       WHERE student_id = $1 AND problem_id = $2 
+       WHERE user_id = $1 AND problem_id = $2 
        ORDER BY submitted_at DESC`,
       [studentId, problemId]
     );
@@ -30,7 +30,7 @@ class Submission {
                FROM submissions s
                LEFT JOIN problems p ON s.problem_id = p.id
                LEFT JOIN assignments a ON s.assignment_id = a.id
-               WHERE s.student_id = $1`;
+               WHERE s.user_id = $1`;
     const params = [studentId];
     let paramCount = 2;
 
@@ -54,9 +54,9 @@ class Submission {
 
   static async findByAssignment(assignmentId) {
     const result = await query(
-      `SELECT s.*, st.name as student_name, st.roll_number, p.title as problem_title
+      `SELECT s.*, u.name as student_name, u.roll_number, p.title as problem_title
        FROM submissions s
-       LEFT JOIN students st ON s.student_id = st.id
+       LEFT JOIN users u ON s.user_id = u.id
        LEFT JOIN problems p ON s.problem_id = p.id
        WHERE s.assignment_id = $1
        ORDER BY s.submitted_at DESC`,
@@ -67,11 +67,11 @@ class Submission {
 
   static async create(submissionData) {
     const result = await query(
-      `INSERT INTO submissions (student_id, assignment_id, problem_id, code, language, status, judge0_token) 
+      `INSERT INTO submissions (user_id, assignment_id, problem_id, code, language, status, judge0_token) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
       [
-        submissionData.studentId,
+        submissionData.studentId || submissionData.userId,
         submissionData.assignmentId,
         submissionData.problemId,
         submissionData.code,
@@ -147,14 +147,14 @@ class Submission {
 
   static async getLeaderboard(assignmentId) {
     const result = await query(
-      `SELECT st.roll_number, st.name, 
+      `SELECT u.roll_number, u.name, 
               SUM(s.score) as total_score,
               COUNT(DISTINCT s.problem_id) as problems_solved,
               MAX(s.submitted_at) as last_submission
        FROM submissions s
-       JOIN students st ON s.student_id = st.id
+       JOIN users u ON s.user_id = u.id
        WHERE s.assignment_id = $1 AND s.status = 'accepted'
-       GROUP BY st.id, st.roll_number, st.name
+       GROUP BY u.id, u.roll_number, u.name
        ORDER BY total_score DESC, last_submission ASC`,
       [assignmentId]
     );
@@ -168,7 +168,7 @@ class Submission {
          COUNT(DISTINCT CASE WHEN s.status = 'accepted' THEN s.problem_id END) as solved_problems,
          SUM(CASE WHEN s.status = 'accepted' THEN s.score ELSE 0 END) as total_score
        FROM problems p
-       LEFT JOIN submissions s ON p.id = s.problem_id AND s.student_id = $1
+       LEFT JOIN submissions s ON p.id = s.problem_id AND s.user_id = $1
        WHERE p.assignment_id = $2`,
       [studentId, assignmentId]
     );
@@ -177,7 +177,7 @@ class Submission {
 
   static async countByStudent(studentId) {
     const result = await query(
-      'SELECT COUNT(*) as count FROM submissions WHERE student_id = $1',
+      'SELECT COUNT(*) as count FROM submissions WHERE user_id = $1',
       [studentId]
     );
     return parseInt(result.rows[0].count);

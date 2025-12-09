@@ -112,7 +112,8 @@ class AssignmentService {
   }
 
   async getStudentAssignments(studentId) {
-    const allAssignments = await Assignment.getActiveAssignments();
+    // Show all active assignments regardless of start/end time window
+    const allAssignments = await Assignment.findAll({ isActive: true });
     const assignmentsWithProgress = [];
 
     for (const assignment of allAssignments) {
