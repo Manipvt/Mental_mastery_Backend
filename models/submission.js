@@ -67,8 +67,8 @@ class Submission {
 
   static async create(submissionData) {
     const result = await query(
-      `INSERT INTO submissions (user_id, assignment_id, problem_id, code, language, status, judge0_token) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      `INSERT INTO submissions (user_id, assignment_id, problem_id, code, language, status) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
       [
         submissionData.studentId || submissionData.userId,
@@ -76,8 +76,7 @@ class Submission {
         submissionData.problemId,
         submissionData.code,
         submissionData.language,
-        submissionData.status || 'pending',
-        submissionData.judge0Token || null
+        submissionData.status || 'pending'
       ]
     );
     return result.rows[0];
@@ -181,6 +180,21 @@ class Submission {
       [studentId]
     );
     return parseInt(result.rows[0].count);
+  }
+
+  static async findAcceptedProblemsByStudent(studentId, assignmentId = null) {
+    const params = [studentId];
+    let sql = `SELECT problem_id FROM submissions WHERE user_id = $1 AND status = 'accepted'`;
+
+    if (assignmentId) {
+      params.push(assignmentId);
+      sql += ` AND assignment_id = $2`;
+    }
+
+    sql += ' GROUP BY problem_id';
+
+    const result = await query(sql, params);
+    return result.rows.map((row) => row.problem_id);
   }
 }
 

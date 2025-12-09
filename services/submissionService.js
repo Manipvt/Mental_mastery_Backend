@@ -274,6 +274,45 @@ class SubmissionService {
     return statusMap[statusId] || 'runtime_error';
   }
 
+  // Lightweight path to mark a problem as solved without running Judge0
+  async markSolved(submissionData, studentId) {
+    const problemId = parseInt(submissionData.problemId, 10);
+    const language = submissionData.language || 'javascript';
+    const code = submissionData.code || '';
+
+    const problem = await Problem.findById(problemId);
+    if (!problem) {
+      throw new ErrorResponse('Problem not found', 404);
+    }
+
+    // Prefer provided assignmentId, fall back to problem's assignment_id
+    const assignmentId = parseInt(submissionData.assignmentId, 10) || problem.assignment_id;
+
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      throw new ErrorResponse('Assignment not found', 404);
+    }
+
+    // If already accepted, just return existing
+    const existing = await Submission.findByStudentAndProblem(studentId, problemId);
+    const accepted = existing.find((s) => s.status === 'accepted');
+    if (accepted) {
+      return accepted;
+    }
+
+    return await Submission.create({
+      userId: studentId,
+      assignmentId,
+      problemId,
+      code,
+      language,
+      status: 'accepted',
+      testCasesPassed: null,
+      totalTestCases: null,
+      score: problem.points || 0,
+    });
+  }
+
   runSimpleTest(code, input, expectedOutput) {
     // Simple comparison for testing (NOT FOR PRODUCTION)
     // This doesn't actually execute code, just simulates a result

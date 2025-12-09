@@ -146,3 +146,22 @@ exports.rerunSubmission = asyncHandler(async (req, res) => {
     data: result,
   });
 });
+
+// @desc    Mark a problem as solved (trusted path from client after local verification)
+// @route   POST /api/v1/submissions/mark-solved
+// @access  Private/Student
+exports.markSolved = asyncHandler(async (req, res) => {
+  const submissionData = {
+    assignmentId: req.body.assignmentId,
+    problemId: req.body.problemId,
+    language: req.body.language,
+    code: req.body.code,
+  };
+
+  const submission = await submissionService.markSolved(submissionData, req.user.id);
+
+  res.status(201).json({
+    success: true,
+    data: submission,
+  });
+});

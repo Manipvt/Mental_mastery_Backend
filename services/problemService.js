@@ -1,16 +1,32 @@
 const Problem = require('../models/problem');
 const TestCase = require('../models/testCase');
 const Assignment = require('../models/assignment');
+const Submission = require('../models/submission');
 const ErrorResponse = require('../utils/errorResponse');
 
 class ProblemService {
-  async getProblemsByAssignment(assignmentId) {
+  async getProblemsByAssignment(assignmentId, studentId = null) {
     const assignment = await Assignment.findById(assignmentId);
     if (!assignment) {
       throw new ErrorResponse('Assignment not found', 404);
     }
 
-    return await Problem.findByAssignmentId(assignmentId);
+    const problems = await Problem.findByAssignmentId(assignmentId);
+
+    if (!studentId) {
+      return problems;
+    }
+
+    const acceptedIds = await Submission.findAcceptedProblemsByStudent(
+      studentId,
+      assignmentId
+    );
+    const solvedSet = new Set(acceptedIds.map(String));
+
+    return problems.map((p) => ({
+      ...p,
+      solved: solvedSet.has(String(p.id)),
+    }));
   }
 
   async getProblemById(id, includeTestCases = false, includeHidden = false) {

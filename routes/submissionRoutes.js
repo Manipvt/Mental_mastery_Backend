@@ -9,6 +9,7 @@ const {
   getMyProgress,
   getStudentProgress,
   rerunSubmission,
+  markSolved,
 } = require('../controllers/submissionController');
 const { protect } = require('../middlewares/auth');
 const { isAdmin, isStudent } = require('../middlewares/roles');
@@ -21,6 +22,7 @@ router.use(protect);
 
 // Student routes
 router.post('/', isStudent, submissionLimiter, submitCode);
+router.post('/mark-solved', isStudent, submissionLimiter, markSolved);
 router.get('/student/me', isStudent, getMySubmissions);
 router.get('/problem/:problemId', isStudent, getProblemSubmissions);
 router.get('/progress/:assignmentId', isStudent, getMyProgress);

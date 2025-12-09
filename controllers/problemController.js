@@ -5,7 +5,11 @@ const problemService = require('../services/problemService');
 // @route   GET /api/v1/problems/assignment/:assignmentId
 // @access  Private
 exports.getProblemsByAssignment = asyncHandler(async (req, res) => {
-  const problems = await problemService.getProblemsByAssignment(req.params.assignmentId);
+  const studentId = req.user?.type === 'student' ? req.user.id : null;
+  const problems = await problemService.getProblemsByAssignment(
+    req.params.assignmentId,
+    studentId
+  );
 
   res.status(200).json({
     success: true,
