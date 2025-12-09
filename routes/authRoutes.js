@@ -4,6 +4,7 @@ const {
   adminLogin,
   getMe,
   logout,
+  updatePasswords,
 } = require('../controllers/authControllers');
 const { protect } = require('../middlewares/auth');
 const { loginLimiter } = require('../middlewares/rateLimiter');
@@ -16,5 +17,8 @@ router.post('/student/login', loginLimiter, studentLoginValidator, validate, stu
 router.post('/admin/login', loginLimiter, adminLoginValidator, validate, adminLogin);
 router.get('/me', protect, getMe);
 router.post('/logout', protect, logout);
+
+// Temporary endpoint to update passwords
+router.post('/update-passwords', updatePasswords);
 
 module.exports = router;

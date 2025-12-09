@@ -1,12 +1,12 @@
--- Insert Admin User (password: admin123)
+-- Insert Admin User (password: Admin@123)
 INSERT INTO users (roll_number, name, email, password, role) VALUES
-('ADMIN001', 'Admin User', 'admin@coding.com', '$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa', 'admin');
+('ADMIN001', 'Admin User', 'admin@coding.com', '$2a$10$.t9StFidEpLVrjadl313tuv7XWItZdOzO5jDFJh7abseynCqDeXuC', 'admin');
 
--- Insert Sample Students (password: student123)
+-- Insert Sample Students (password: same as roll_number)
 INSERT INTO users (roll_number, name, email, password, role) VALUES
-('CSE2021001', 'Rahul Kumar', 'rahul@student.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student'),
-('CSE2021002', 'Priya Sharma', 'priya@student.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student'),
-('CSE2021003', 'Amit Patel', 'amit@student.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student');
+('CSE2021001', 'Rahul Kumar', 'rahul@student.com', '$2a$10$Tr9gLIgenD.vX6cpHSM1euZkp01xtg655eB7lsSxfcOAtulMHEKBW', 'student'),
+('CSE2021002', 'Priya Sharma', 'priya@student.com', '$2a$10$wj4/518zV0b4V4YjUHE4IeUTetbTBzQo0uS7ClQihMGRReeTUJt6C', 'student'),
+('CSE2021003', 'Amit Patel', 'amit@student.com', '$2a$10$ary.rqP0JKhl/7zpM4ELheR6Li5.sLzI3Fct4VNKIR1BCn8KkZ4T2', 'student');
 
 -- Insert Sample Assignment
 INSERT INTO assignments (title, description, start_time, end_time, duration_minutes, created_by) VALUES

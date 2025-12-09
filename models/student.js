@@ -3,24 +3,24 @@ const { query } = require('../config/db');
 class Student {
   static async findByRollNumber(rollNumber) {
     const result = await query(
-      'SELECT * FROM students WHERE roll_number = $1',
-      [rollNumber]
+      'SELECT * FROM users WHERE roll_number = $1 AND role = $2',
+      [rollNumber, 'student']
     );
     return result.rows[0];
   }
 
   static async findById(id) {
     const result = await query(
-      'SELECT id, roll_number, name, email, branch, year, section, is_active, created_at FROM students WHERE id = $1',
-      [id]
+      'SELECT id, roll_number, name, email, branch, year, section, is_active, created_at FROM users WHERE id = $1 AND role = $2',
+      [id, 'student']
     );
     return result.rows[0];
   }
 
   static async findAll(filters = {}) {
-    let sql = 'SELECT id, roll_number, name, email, branch, year, section, is_active, created_at FROM students WHERE 1=1';
-    const params = [];
-    let paramCount = 1;
+    let sql = 'SELECT id, roll_number, name, email, branch, year, section, is_active, created_at FROM users WHERE role = $1';
+    const params = ['student'];
+    let paramCount = 2;
 
     if (filters.branch) {
       sql += ` AND branch = $${paramCount}`;
@@ -54,8 +54,8 @@ class Student {
 
   static async create(studentData) {
     const result = await query(
-      `INSERT INTO students (roll_number, name, email, password, branch, year, section) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      `INSERT INTO users (roll_number, name, email, password, branch, year, section, role) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        RETURNING id, roll_number, name, email, branch, year, section, created_at`,
       [
         studentData.rollNumber,
@@ -64,7 +64,8 @@ class Student {
         studentData.password,
         studentData.branch,
         studentData.year,
-        studentData.section
+        studentData.section,
+        'student'
       ]
     );
     return result.rows[0];
@@ -124,8 +125,8 @@ class Student {
     params.push(id);
 
     const result = await query(
-      `UPDATE students SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $${paramCount} 
+      `UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $${paramCount} AND role = 'student'
        RETURNING id, roll_number, name, email, branch, year, section, is_active`,
       params
     );
@@ -134,16 +135,16 @@ class Student {
 
   static async delete(id) {
     const result = await query(
-      'DELETE FROM students WHERE id = $1 RETURNING id',
-      [id]
+      'DELETE FROM users WHERE id = $1 AND role = $2 RETURNING id',
+      [id, 'student']
     );
     return result.rows[0];
   }
 
   static async count(filters = {}) {
-    let sql = 'SELECT COUNT(*) as count FROM students WHERE 1=1';
-    const params = [];
-    let paramCount = 1;
+    let sql = 'SELECT COUNT(*) as count FROM users WHERE role = $1';
+    const params = ['student'];
+    let paramCount = 2;
 
     if (filters.branch) {
       sql += ` AND branch = $${paramCount}`;
@@ -163,16 +164,16 @@ class Student {
 
   static async bulkCreate(studentsData) {
     const values = studentsData.map((student, index) => {
-      const offset = index * 7;
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`;
+      const offset = index * 8;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`;
     }).join(', ');
 
     const params = studentsData.flatMap(s => [
-      s.rollNumber, s.name, s.email, s.password, s.branch, s.year, s.section
+      s.rollNumber, s.name, s.email, s.password, s.branch, s.year, s.section, 'student'
     ]);
 
     const result = await query(
-      `INSERT INTO students (roll_number, name, email, password, branch, year, section) 
+      `INSERT INTO users (roll_number, name, email, password, branch, year, section, role) 
        VALUES ${values} 
        RETURNING id, roll_number, name, email, branch, year, section`,
       params
