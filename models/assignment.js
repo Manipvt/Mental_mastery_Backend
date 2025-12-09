@@ -3,9 +3,9 @@ const { query } = require('../config/db');
 class Assignment {
   static async findAll(filters = {}) {
     let sql = `
-      SELECT a.*, ad.name as created_by_name 
+      SELECT a.*, u.name as created_by_name, u.roll_number as created_by_roll 
       FROM assignments a 
-      LEFT JOIN admins ad ON a.created_by = ad.id 
+      LEFT JOIN users u ON a.created_by = u.id 
       WHERE 1=1
     `;
     const params = [];
@@ -25,9 +25,9 @@ class Assignment {
 
   static async findById(id) {
     const result = await query(
-      `SELECT a.*, ad.name as created_by_name, ad.username as created_by_username
+      `SELECT a.*, u.name as created_by_name, u.roll_number as created_by_roll
        FROM assignments a 
-       LEFT JOIN admins ad ON a.created_by = ad.id 
+       LEFT JOIN users u ON a.created_by = u.id 
        WHERE a.id = $1`,
       [id]
     );

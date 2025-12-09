@@ -11,12 +11,13 @@ class TestCase {
 
   static async findByProblemId(problemId, includeHidden = false) {
     let sql = 'SELECT * FROM test_cases WHERE problem_id = $1';
-    
+
     if (!includeHidden) {
       sql += ' AND is_hidden = false';
     }
-    
-    sql += ' ORDER BY order_index ASC';
+
+    // order_index column does not exist in schema; fall back to id ordering
+    sql += ' ORDER BY id ASC';
 
     const result = await query(sql, [problemId]);
     return result.rows;
@@ -24,7 +25,7 @@ class TestCase {
 
   static async getSampleTestCases(problemId) {
     const result = await query(
-      'SELECT * FROM test_cases WHERE problem_id = $1 AND is_sample = true ORDER BY order_index ASC',
+      'SELECT * FROM test_cases WHERE problem_id = $1 AND is_sample = true ORDER BY id ASC',
       [problemId]
     );
     return result.rows;
@@ -32,8 +33,8 @@ class TestCase {
 
   static async create(testCaseData) {
     const result = await query(
-      `INSERT INTO test_cases (problem_id, input, expected_output, is_sample, is_hidden, points, order_index) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      `INSERT INTO test_cases (problem_id, input, expected_output, is_sample, is_hidden, points) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
       [
         testCaseData.problemId,
@@ -41,8 +42,7 @@ class TestCase {
         testCaseData.expectedOutput,
         testCaseData.isSample || false,
         testCaseData.isHidden || false,
-        testCaseData.points || 1,
-        testCaseData.orderIndex || 0
+        testCaseData.points || 1
       ]
     );
     return result.rows[0];
@@ -83,12 +83,6 @@ class TestCase {
       paramCount++;
     }
 
-    if (testCaseData.orderIndex !== undefined) {
-      fields.push(`order_index = $${paramCount}`);
-      params.push(testCaseData.orderIndex);
-      paramCount++;
-    }
-
     if (fields.length === 0) {
       return null;
     }
@@ -114,8 +108,8 @@ class TestCase {
 
   static async bulkCreate(testCasesData) {
     const values = testCasesData.map((tc, index) => {
-      const offset = index * 7;
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`;
+      const offset = index * 6;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`;
     }).join(', ');
 
     const params = testCasesData.flatMap(tc => [
@@ -124,12 +118,11 @@ class TestCase {
       tc.expectedOutput,
       tc.isSample || false,
       tc.isHidden || false,
-      tc.points || 1,
-      tc.orderIndex || 0
+      tc.points || 1
     ]);
 
     const result = await query(
-      `INSERT INTO test_cases (problem_id, input, expected_output, is_sample, is_hidden, points, order_index) 
+      `INSERT INTO test_cases (problem_id, input, expected_output, is_sample, is_hidden, points) 
        VALUES ${values} 
        RETURNING *`,
       params
