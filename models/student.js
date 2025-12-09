@@ -3,7 +3,7 @@ const { query } = require('../config/db');
 class Student {
   static async findByRollNumber(rollNumber) {
     const result = await query(
-      'SELECT * FROM users WHERE roll_number = $1 AND role = $2',
+      'SELECT * FROM users WHERE UPPER(roll_number) = UPPER($1) AND role = $2',
       [rollNumber, 'student']
     );
     return result.rows[0];

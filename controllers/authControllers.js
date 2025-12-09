@@ -7,7 +7,8 @@ const { query } = require('../config/db');
 // @route   POST /api/v1/auth/student/login
 // @access  Public
 exports.studentLogin = asyncHandler(async (req, res, next) => {
-  const { rollNumber, password } = req.body;
+  const rollNumber = (req.body.rollNumber || '').trim().toUpperCase();
+  const password = (req.body.password || '').trim();
 
   const result = await authService.studentLogin(rollNumber, password);
 

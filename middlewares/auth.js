@@ -3,17 +3,28 @@ const ErrorResponse = require('../utils/errorResponse');
 const { verifyToken } = require('../utils/jwt');
 const Student = require('../models/student');
 const Admin = require('../models/admin');
+const logger = require('../config/logger');
 
 // Protect routes - authenticate user
 exports.protect = asyncHandler(async (req, res, next) => {
   let token;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    token = req.headers.authorization.split(' ')[1];
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+
+  if (authHeader && authHeader.toLowerCase().startsWith('bearer')) {
+    token = authHeader.split(' ')[1];
   }
+
+  // Fallback to cookie-based token if header missing
+  if (!token && req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  logger.debug('auth: token presence', {
+    hasHeader: !!authHeader,
+    hasCookie: !!(req.cookies && req.cookies.token),
+    tokenPreview: token ? `${token.slice(0, 10)}...` : null,
+  });
 
   if (!token) {
     return next(new ErrorResponse('Not authorized to access this route', 401));
@@ -21,16 +32,46 @@ exports.protect = asyncHandler(async (req, res, next) => {
 
   try {
     const decoded = verifyToken(token);
+    logger.debug('auth: decoded token', {
+      type: decoded.type || decoded.role,
+      id: decoded.id,
+      rollNumber: decoded.rollNumber,
+    });
     
-    if (decoded.type === 'student') {
-      req.user = await Student.findById(decoded.id);
-      req.user.type = 'student';
-    } else if (decoded.type === 'admin') {
-      req.user = await Admin.findById(decoded.id);
-      req.user.type = 'admin';
+    const userType = decoded.type || decoded.role;
+
+    if (userType === 'student') {
+      // Prefer ID lookup, fall back to roll number if missing
+      if (decoded.id) {
+        req.user = await Student.findById(decoded.id);
+      }
+      logger.debug('auth: student lookup by id', { id: decoded.id, found: !!req.user });
+
+      if (!req.user && decoded.rollNumber) {
+        req.user = await Student.findByRollNumber(decoded.rollNumber);
+        logger.debug('auth: student lookup by rollNumber', {
+          rollNumber: decoded.rollNumber,
+          found: !!req.user,
+        });
+      }
+      if (req.user) {
+        req.user.type = 'student';
+      }
+    } else if (userType === 'admin') {
+      if (decoded.id) {
+        req.user = await Admin.findById(decoded.id);
+      }
+      if (req.user) {
+        req.user.type = 'admin';
+      }
     }
 
     if (!req.user) {
+      logger.warn('auth: user not found after lookup', {
+        type: userType,
+        idTried: decoded.id,
+        rollNumberTried: decoded.rollNumber,
+      });
       return next(new ErrorResponse('User not found', 404));
     }
 
