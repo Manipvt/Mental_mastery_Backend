@@ -20,11 +20,14 @@ exports.protect = asyncHandler(async (req, res, next) => {
     token = req.cookies.token;
   }
 
-  logger.debug('auth: token presence', {
-    hasHeader: !!authHeader,
-    hasCookie: !!(req.cookies && req.cookies.token),
-    tokenPreview: token ? `${token.slice(0, 10)}...` : null,
-  });
+  logger.debug(
+    'auth: token presence ' +
+      JSON.stringify({
+        hasHeader: !!authHeader,
+        hasCookie: !!(req.cookies && req.cookies.token),
+        tokenPreview: token ? `${token.slice(0, 10)}...` : null,
+      })
+  );
 
   if (!token) {
     return next(new ErrorResponse('Not authorized to access this route', 401));
@@ -32,11 +35,14 @@ exports.protect = asyncHandler(async (req, res, next) => {
 
   try {
     const decoded = verifyToken(token);
-    logger.debug('auth: decoded token', {
-      type: decoded.type || decoded.role,
-      id: decoded.id,
-      rollNumber: decoded.rollNumber,
-    });
+    logger.debug(
+      'auth: decoded token ' +
+        JSON.stringify({
+          type: decoded.type || decoded.role,
+          id: decoded.id,
+          rollNumber: decoded.rollNumber,
+        })
+    );
     
     const userType = decoded.type || decoded.role;
 
@@ -45,14 +51,20 @@ exports.protect = asyncHandler(async (req, res, next) => {
       if (decoded.id) {
         req.user = await Student.findById(decoded.id);
       }
-      logger.debug('auth: student lookup by id', { id: decoded.id, found: !!req.user });
+      logger.debug(
+        'auth: student lookup by id ' +
+          JSON.stringify({ id: decoded.id, found: !!req.user })
+      );
 
       if (!req.user && decoded.rollNumber) {
         req.user = await Student.findByRollNumber(decoded.rollNumber);
-        logger.debug('auth: student lookup by rollNumber', {
-          rollNumber: decoded.rollNumber,
-          found: !!req.user,
-        });
+        logger.debug(
+          'auth: student lookup by rollNumber ' +
+            JSON.stringify({
+              rollNumber: decoded.rollNumber,
+              found: !!req.user,
+            })
+        );
       }
       if (req.user) {
         req.user.type = 'student';
@@ -67,11 +79,14 @@ exports.protect = asyncHandler(async (req, res, next) => {
     }
 
     if (!req.user) {
-      logger.warn('auth: user not found after lookup', {
-        type: userType,
-        idTried: decoded.id,
-        rollNumberTried: decoded.rollNumber,
-      });
+      logger.warn(
+        'auth: user not found after lookup ' +
+          JSON.stringify({
+            type: userType,
+            idTried: decoded.id,
+            rollNumberTried: decoded.rollNumber,
+          })
+      );
       return next(new ErrorResponse('User not found', 404));
     }
 

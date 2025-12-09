@@ -3,7 +3,7 @@ const { query } = require('../config/db');
 class Student {
   static async findByRollNumber(rollNumber) {
     const result = await query(
-      'SELECT * FROM users WHERE UPPER(roll_number) = UPPER($1) AND role = $2',
+      'SELECT id, roll_number, name, email, password, role, is_active, created_at, updated_at FROM users WHERE UPPER(roll_number) = UPPER($1) AND role = $2',
       [rollNumber, 'student']
     );
     return result.rows[0];
@@ -11,34 +11,16 @@ class Student {
 
   static async findById(id) {
     const result = await query(
-      'SELECT id, roll_number, name, email, branch, year, section, is_active, created_at FROM users WHERE id = $1 AND role = $2',
+      'SELECT id, roll_number, name, email, role, is_active, created_at, updated_at FROM users WHERE id = $1 AND role = $2',
       [id, 'student']
     );
     return result.rows[0];
   }
 
   static async findAll(filters = {}) {
-    let sql = 'SELECT id, roll_number, name, email, branch, year, section, is_active, created_at FROM users WHERE role = $1';
+    let sql = 'SELECT id, roll_number, name, email, role, is_active, created_at, updated_at FROM users WHERE role = $1';
     const params = ['student'];
     let paramCount = 2;
-
-    if (filters.branch) {
-      sql += ` AND branch = $${paramCount}`;
-      params.push(filters.branch);
-      paramCount++;
-    }
-
-    if (filters.year) {
-      sql += ` AND year = $${paramCount}`;
-      params.push(filters.year);
-      paramCount++;
-    }
-
-    if (filters.section) {
-      sql += ` AND section = $${paramCount}`;
-      params.push(filters.section);
-      paramCount++;
-    }
 
     if (filters.isActive !== undefined) {
       sql += ` AND is_active = $${paramCount}`;
@@ -54,17 +36,14 @@ class Student {
 
   static async create(studentData) {
     const result = await query(
-      `INSERT INTO users (roll_number, name, email, password, branch, year, section, role) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-       RETURNING id, roll_number, name, email, branch, year, section, created_at`,
+      `INSERT INTO users (roll_number, name, email, password, role) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING id, roll_number, name, email, role, created_at, updated_at`,
       [
         studentData.rollNumber,
         studentData.name,
         studentData.email,
         studentData.password,
-        studentData.branch,
-        studentData.year,
-        studentData.section,
         'student'
       ]
     );
@@ -85,24 +64,6 @@ class Student {
     if (studentData.email) {
       fields.push(`email = $${paramCount}`);
       params.push(studentData.email);
-      paramCount++;
-    }
-
-    if (studentData.branch) {
-      fields.push(`branch = $${paramCount}`);
-      params.push(studentData.branch);
-      paramCount++;
-    }
-
-    if (studentData.year) {
-      fields.push(`year = $${paramCount}`);
-      params.push(studentData.year);
-      paramCount++;
-    }
-
-    if (studentData.section) {
-      fields.push(`section = $${paramCount}`);
-      params.push(studentData.section);
       paramCount++;
     }
 
@@ -127,7 +88,7 @@ class Student {
     const result = await query(
       `UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $${paramCount} AND role = 'student'
-       RETURNING id, roll_number, name, email, branch, year, section, is_active`,
+       RETURNING id, roll_number, name, email, role, is_active, updated_at`,
       params
     );
     return result.rows[0];
