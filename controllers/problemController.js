@@ -71,9 +71,9 @@ exports.getProblem = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get problem with sample test cases only (for students)
+// @desc    Get problem with sample test cases only (for students and admins)
 // @route   GET /api/v1/problems/:id/samples
-// @access  Private/Student
+// @access  Private (Student or Admin)
 exports.getProblemWithSamples = asyncHandler(async (req, res) => {
   const problem = await problemService.getProblemWithSamples(req.params.id);
 
@@ -114,6 +114,7 @@ exports.createProblem = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 exports.updateProblem = asyncHandler(async (req, res) => {
   const problemData = {
+    assignmentId: req.body.assignmentId,
     title: req.body.title,
     description: req.body.description,
     difficulty: req.body.difficulty,

@@ -83,9 +83,16 @@ class AssignmentService {
     const submissions = await Submission.findByAssignment(idInt);
     if (submissions.length > 0) {
       throw new ErrorResponse(
-        'Cannot delete assignment with existing submissions',
+        'Cannot delete assignment with existing submissions. Please delete all submissions first.',
         400
       );
+    }
+
+    // Unassign all problems from this assignment before deleting
+    // This prevents orphaned problems and allows clean deletion
+    const problems = await Problem.findByAssignmentId(idInt);
+    for (const problem of problems) {
+      await Problem.update(problem.id, { assignmentId: null });
     }
 
     return await Assignment.delete(idInt);

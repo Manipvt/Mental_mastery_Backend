@@ -98,7 +98,20 @@ class ProblemService {
       throw new ErrorResponse('Problem not found', 404);
     }
 
-    return await Problem.update(id, problemData);
+    // Log the update for debugging
+    if (problemData.assignmentId !== undefined) {
+      console.log(`Updating problem ${id}: setting assignmentId to ${problemData.assignmentId}`);
+    }
+
+    const updated = await Problem.update(id, problemData);
+    
+    // Verify the update
+    if (problemData.assignmentId !== undefined) {
+      const verify = await Problem.findById(id);
+      console.log(`Problem ${id} after update - assignmentId: ${verify?.assignment_id}`);
+    }
+
+    return updated;
   }
 
   async deleteProblem(id) {

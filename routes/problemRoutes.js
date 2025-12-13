@@ -44,8 +44,8 @@ router
   .put(isAdmin, updateProblemValidator, validate, updateProblem)
   .delete(isAdmin, deleteProblem);
 
-// Student route to get problem with only sample test cases
-router.get('/:id/samples', isStudent, getProblemWithSamples);
+// Route to get problem with only sample test cases (for students and admins viewing assignments)
+router.get('/:id/samples', getProblemWithSamples);
 
 // Admin route to validate test cases
 router.get('/:id/validate', isAdmin, validateTestCases);
