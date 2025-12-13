@@ -29,9 +29,9 @@ exports.studentLoginValidator = [
 ];
 
 exports.adminLoginValidator = [
-  body('username')
+  body('rollNumber')
     .notEmpty()
-    .withMessage('Username is required')
+    .withMessage('Roll number is required')
     .trim(),
   body('password')
     .notEmpty()

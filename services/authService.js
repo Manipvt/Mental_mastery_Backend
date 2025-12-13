@@ -44,35 +44,69 @@ class AuthService {
     };
   }
 
-  async adminLogin(username, password) {
-    const admin = await Admin.findByUsername(username);
+  async adminLogin(rollNumber, password) {
+    try {
+      console.log(`Attempting admin login for rollNumber: ${rollNumber}`);
+      
+      // Find admin by roll number
+      const admin = await Admin.findByRollNumber(rollNumber);
+      console.log('Admin found:', admin ? 'Yes' : 'No');
 
-    if (!admin) {
-      throw new ErrorResponse('Invalid credentials', 401);
+      if (!admin) {
+        console.log('No admin found with roll number:', rollNumber);
+        throw new ErrorResponse('Invalid credentials', 401);
+      }
+
+      if (!admin.is_active) {
+        console.log('Admin account is not active');
+        throw new ErrorResponse('Account is deactivated', 403);
+      }
+
+      console.log('Comparing password...');
+      console.log('Input password:', password);
+      console.log('Stored hash:', admin.password);
+      
+      // Trim and handle potential whitespace issues
+      const passwordToCheck = password.trim();
+      
+      // Ensure the stored password is a string
+      const storedPassword = admin.password ? admin.password.toString() : '';
+      
+      const isMatch = await bcrypt.compare(passwordToCheck, storedPassword);
+      console.log('Password match:', isMatch);
+
+      if (!isMatch) {
+        console.log('Password does not match');
+        // For debugging - remove in production
+        if (passwordToCheck === 'Admin@123') {
+          console.log('Debug: Input matches expected password, but hash comparison failed');
+          console.log('This suggests the stored hash might be incorrect');
+        }
+        throw new ErrorResponse('Invalid credentials', 401);
+      }
+
+      console.log('Generating token...');
+      const token = generateAdminToken(admin);
+      console.log('Token generated successfully');
+
+      const userData = {
+        token,
+        user: {
+          id: admin.id,
+          rollNumber: admin.roll_number,
+          name: admin.name,
+          email: admin.email,
+          role: 'admin',
+          type: 'admin',
+        },
+      };
+
+      console.log('Login successful, returning user data');
+      return userData;
+    } catch (error) {
+      console.error('Error in adminLogin:', error);
+      throw error;
     }
-
-    if (!admin.is_active) {
-      throw new ErrorResponse('Account is deactivated', 403);
-    }
-
-    const isMatch = await bcrypt.compare(password, admin.password);
-
-    if (!isMatch) {
-      throw new ErrorResponse('Invalid credentials', 401);
-    }
-
-    const token = generateAdminToken(admin);
-
-    return {
-      token,
-      user: {
-        id: admin.id,
-        username: admin.username,
-        name: admin.name,
-        email: admin.email,
-        type: 'admin',
-      },
-    };
   }
 
   async getProfile(userId, userType) {

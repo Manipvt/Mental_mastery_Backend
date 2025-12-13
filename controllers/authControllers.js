@@ -22,14 +22,33 @@ exports.studentLogin = asyncHandler(async (req, res, next) => {
 // @route   POST /api/v1/auth/admin/login
 // @access  Public
 exports.adminLogin = asyncHandler(async (req, res, next) => {
-  const { username, password } = req.body;
+  try {
+    console.log('Admin login request received:', req.body);
+    
+    const { rollNumber, password } = req.body;
+    
+    if (!rollNumber || !password) {
+      console.log('Missing credentials:', { rollNumber: !!rollNumber, password: !!password });
+      return next(new ErrorResponse('Please provide roll number and password', 400));
+    }
 
-  const result = await authService.adminLogin(username, password);
+    console.log('Attempting to authenticate admin with rollNumber:', rollNumber);
+    const result = await authService.adminLogin(rollNumber, password);
+    
+    if (!result) {
+      console.log('No result returned from authService.adminLogin');
+      return next(new ErrorResponse('Authentication failed', 401));
+    }
 
-  res.status(200).json({
-    success: true,
-    data: result,
-  });
+    console.log('Admin login successful for:', rollNumber);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error in adminLogin controller:', error);
+    next(error);
+  }
 });
 
 // @desc    Get current logged in user

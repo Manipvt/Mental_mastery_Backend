@@ -1,11 +1,13 @@
 const { query } = require('../config/db');
 
 class Admin {
-  static async findByUsername(username) {
+  static async findByUsername(identifier) {
+    // First try to find by roll_number (which is what we use for admin login)
     const result = await query(
-      'SELECT * FROM users WHERE username = $1 AND role = $2',
-      [username, 'admin']
+      'SELECT * FROM users WHERE (roll_number = $1 OR email = $1) AND role = $2',
+      [identifier, 'admin']
     );
+    
     return result.rows[0];
   }
 
@@ -15,6 +17,21 @@ class Admin {
       [id, 'admin']
     );
     return result.rows[0];
+  }
+
+  static async findByRollNumber(rollNumber) {
+    try {
+      console.log(`Searching for admin with roll_number: ${rollNumber}`);
+      const result = await query(
+        'SELECT * FROM users WHERE roll_number = $1 AND role = $2',
+        [rollNumber, 'admin']
+      );
+      console.log(`Found admin:`, result.rows[0] ? 'Yes' : 'No');
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error in findByRollNumber:', error);
+      throw error;
+    }
   }
 
   static async findAll(filters = {}) {
