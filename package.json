@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "migrate": "node migrations/migrate.js"
+    "migrate": "node migrations/migrate.js",
+    "migrate:add-problem-columns": "node migrations/run_add_problem_columns.js",
+    "migrate:add-max-violations": "node migrations/run_add_max_violations.js"
   },
   "dependencies": {
     "axios": "^1.6.2",

@@ -24,12 +24,17 @@ class Assignment {
   }
 
   static async findById(id) {
+    // Ensure id is an integer
+    const idInt = parseInt(id, 10);
+    if (isNaN(idInt)) {
+      return null;
+    }
     const result = await query(
       `SELECT a.*, u.name as created_by_name, u.roll_number as created_by_roll
        FROM assignments a 
        LEFT JOIN users u ON a.created_by = u.id 
        WHERE a.id = $1`,
-      [id]
+      [idInt]
     );
     return result.rows[0];
   }

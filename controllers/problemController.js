@@ -14,6 +14,27 @@ exports.getAllProblems = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get all available problems for student
+// @route   GET /api/v1/problems/available
+// @access  Private/Student
+exports.getAvailableProblemsForStudent = asyncHandler(async (req, res) => {
+  const studentId = req.user?.id;
+  if (!studentId || req.user?.type !== 'student') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Student access required.',
+    });
+  }
+
+  const problems = await problemService.getAvailableProblemsForStudent(studentId);
+
+  res.status(200).json({
+    success: true,
+    count: problems.length,
+    data: problems,
+  });
+});
+
 // @desc    Get problems by assignment
 // @route   GET /api/v1/problems/assignment/:assignmentId
 // @access  Private

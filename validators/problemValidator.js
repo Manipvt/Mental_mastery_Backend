@@ -2,8 +2,7 @@ const { body, param } = require('express-validator');
 
 exports.createProblemValidator = [
   body('assignmentId')
-    .notEmpty()
-    .withMessage('Assignment ID is required')
+    .optional()
     .isInt()
     .withMessage('Invalid assignment ID'),
   body('title')
@@ -32,6 +31,15 @@ exports.createProblemValidator = [
     .optional()
     .isInt({ min: 1000 })
     .withMessage('Memory limit must be at least 1000 KB'),
+  body('constraints')
+    .optional()
+    .trim(),
+  body('inputFormat')
+    .optional()
+    .trim(),
+  body('outputFormat')
+    .optional()
+    .trim(),
 ];
 
 exports.updateProblemValidator = [
@@ -54,4 +62,13 @@ exports.updateProblemValidator = [
     .optional()
     .isInt({ min: 1 })
     .withMessage('Points must be a positive number'),
+  body('constraints')
+    .optional()
+    .trim(),
+  body('inputFormat')
+    .optional()
+    .trim(),
+  body('outputFormat')
+    .optional()
+    .trim(),
 ];

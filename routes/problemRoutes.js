@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   getAllProblems,
+  getAvailableProblemsForStudent,
   getProblemsByAssignment,
   getProblem,
   getProblemWithSamples,
@@ -29,6 +30,7 @@ const router = express.Router();
 router.use(protect);
 
 // Problem routes
+router.get('/available', isStudent, getAvailableProblemsForStudent);
 router.get('/assignment/:assignmentId', getProblemsByAssignment);
 
 router

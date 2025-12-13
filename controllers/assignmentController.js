@@ -20,9 +20,10 @@ exports.getAllAssignments = asyncHandler(async (req, res) => {
 
 // @desc    Get single assignment
 // @route   GET /api/v1/assignments/:id
-// @access  Private
+// @access  Private (Admin or Student)
 exports.getAssignment = asyncHandler(async (req, res) => {
-  const includeProblems = req.query.includeProblems === 'true';
+  // Always include problems for better UX
+  const includeProblems = req.query.includeProblems !== 'false';
   const assignment = await assignmentService.getAssignmentById(
     req.params.id,
     includeProblems

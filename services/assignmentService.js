@@ -9,13 +9,19 @@ class AssignmentService {
   }
 
   async getAssignmentById(id, includeProblems = false) {
-    const assignment = await Assignment.findById(id);
+    // Ensure id is an integer
+    const idInt = parseInt(id, 10);
+    if (isNaN(idInt)) {
+      throw new ErrorResponse('Invalid assignment ID', 400);
+    }
+
+    const assignment = await Assignment.findById(idInt);
     if (!assignment) {
       throw new ErrorResponse('Assignment not found', 404);
     }
 
     if (includeProblems) {
-      const problems = await Problem.findByAssignmentId(id);
+      const problems = await Problem.findByAssignmentId(idInt);
       assignment.problems = problems;
       assignment.problemCount = problems.length;
     }
@@ -37,7 +43,13 @@ class AssignmentService {
   }
 
   async updateAssignment(id, assignmentData) {
-    const assignment = await Assignment.findById(id);
+    // Ensure id is an integer
+    const idInt = parseInt(id, 10);
+    if (isNaN(idInt)) {
+      throw new ErrorResponse('Invalid assignment ID', 400);
+    }
+
+    const assignment = await Assignment.findById(idInt);
     if (!assignment) {
       throw new ErrorResponse('Assignment not found', 404);
     }
@@ -52,17 +64,23 @@ class AssignmentService {
       }
     }
 
-    return await Assignment.update(id, assignmentData);
+    return await Assignment.update(idInt, assignmentData);
   }
 
   async deleteAssignment(id) {
-    const assignment = await Assignment.findById(id);
+    // Ensure id is an integer
+    const idInt = parseInt(id, 10);
+    if (isNaN(idInt)) {
+      throw new ErrorResponse('Invalid assignment ID', 400);
+    }
+
+    const assignment = await Assignment.findById(idInt);
     if (!assignment) {
       throw new ErrorResponse('Assignment not found', 404);
     }
 
     // Check if there are submissions
-    const submissions = await Submission.findByAssignment(id);
+    const submissions = await Submission.findByAssignment(idInt);
     if (submissions.length > 0) {
       throw new ErrorResponse(
         'Cannot delete assignment with existing submissions',
@@ -70,7 +88,7 @@ class AssignmentService {
       );
     }
 
-    return await Assignment.delete(id);
+    return await Assignment.delete(idInt);
   }
 
   async getActiveAssignments() {
@@ -82,22 +100,34 @@ class AssignmentService {
   }
 
   async toggleAssignmentStatus(id, isActive) {
-    const assignment = await Assignment.findById(id);
+    // Ensure id is an integer
+    const idInt = parseInt(id, 10);
+    if (isNaN(idInt)) {
+      throw new ErrorResponse('Invalid assignment ID', 400);
+    }
+
+    const assignment = await Assignment.findById(idInt);
     if (!assignment) {
       throw new ErrorResponse('Assignment not found', 404);
     }
 
-    return await Assignment.update(id, { isActive });
+    return await Assignment.update(idInt, { isActive });
   }
 
   async getAssignmentStats(id) {
-    const assignment = await Assignment.findById(id);
+    // Ensure id is an integer
+    const idInt = parseInt(id, 10);
+    if (isNaN(idInt)) {
+      throw new ErrorResponse('Invalid assignment ID', 400);
+    }
+
+    const assignment = await Assignment.findById(idInt);
     if (!assignment) {
       throw new ErrorResponse('Assignment not found', 404);
     }
 
-    const problems = await Problem.findByAssignmentId(id);
-    const submissions = await Submission.findByAssignment(id);
+    const problems = await Problem.findByAssignmentId(idInt);
+    const submissions = await Submission.findByAssignment(idInt);
 
     const uniqueStudents = new Set(submissions.map(s => s.user_id));
     const acceptedSubmissions = submissions.filter(s => s.status === 'accepted');

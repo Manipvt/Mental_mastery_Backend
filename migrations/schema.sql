@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS problems (
     time_limit INTEGER DEFAULT 2000, -- in milliseconds
     memory_limit INTEGER DEFAULT 256000, -- in KB
     order_index INTEGER DEFAULT 0,
+    constraints TEXT,
+    input_format TEXT,
+    output_format TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

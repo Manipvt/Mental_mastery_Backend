@@ -6,10 +6,14 @@ class Problem {
     const params = [];
     let paramCount = 1;
 
-    if (filters.assignmentId) {
-      sql += ` AND assignment_id = $${paramCount}`;
-      params.push(filters.assignmentId);
-      paramCount++;
+    if (filters.assignmentId !== undefined) {
+      if (filters.assignmentId === null) {
+        sql += ` AND assignment_id IS NULL`;
+      } else {
+        sql += ` AND assignment_id = $${paramCount}`;
+        params.push(filters.assignmentId);
+        paramCount++;
+      }
     }
 
     sql += ' ORDER BY created_at DESC';
@@ -27,20 +31,34 @@ class Problem {
   }
 
   static async findByAssignmentId(assignmentId) {
+    // Ensure assignmentId is an integer for proper database comparison
+    const assignmentIdInt = parseInt(assignmentId, 10);
+    if (isNaN(assignmentIdInt)) {
+      return [];
+    }
     const result = await query(
       'SELECT * FROM problems WHERE assignment_id = $1 ORDER BY order_index ASC',
-      [assignmentId]
+      [assignmentIdInt]
     );
     return result.rows;
   }
 
   static async create(problemData) {
+    // Ensure assignmentId is an integer or null
+    let assignmentId = null;
+    if (problemData.assignmentId) {
+      const assignmentIdInt = parseInt(problemData.assignmentId, 10);
+      if (!isNaN(assignmentIdInt)) {
+        assignmentId = assignmentIdInt;
+      }
+    }
+
     const result = await query(
       `INSERT INTO problems (assignment_id, title, description, difficulty, points, time_limit, memory_limit, order_index, constraints, input_format, output_format) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
        RETURNING *`,
       [
-        problemData.assignmentId,
+        assignmentId,
         problemData.title,
         problemData.description,
         problemData.difficulty || 'medium',
@@ -48,9 +66,9 @@ class Problem {
         problemData.timeLimit || 2000,
         problemData.memoryLimit || 256000,
         problemData.orderIndex || 0,
-        problemData.constraints,
-        problemData.inputFormat,
-        problemData.outputFormat
+        problemData.constraints || null,
+        problemData.inputFormat || null,
+        problemData.outputFormat || null
       ]
     );
     return result.rows[0];
@@ -101,6 +119,20 @@ class Problem {
       fields.push(`order_index = $${paramCount}`);
       params.push(problemData.orderIndex);
       paramCount++;
+    }
+
+    if (problemData.assignmentId !== undefined) {
+      if (problemData.assignmentId === null) {
+        fields.push(`assignment_id = NULL`);
+      } else {
+        // Ensure assignmentId is an integer
+        const assignmentIdInt = parseInt(problemData.assignmentId, 10);
+        if (!isNaN(assignmentIdInt)) {
+          fields.push(`assignment_id = $${paramCount}`);
+          params.push(assignmentIdInt);
+          paramCount++;
+        }
+      }
     }
 
     if (problemData.constraints !== undefined) {
