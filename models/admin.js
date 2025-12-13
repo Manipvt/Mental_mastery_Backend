@@ -12,11 +12,16 @@ class Admin {
   }
 
   static async findById(id) {
-    const result = await query(
-      'SELECT id, username, name, email, role, is_active, created_at FROM users WHERE id = $1 AND role = $2',
-      [id, 'admin']
-    );
-    return result.rows[0];
+    try {
+      const result = await query(
+        'SELECT id, name, email, roll_number, role, is_active, created_at, updated_at FROM users WHERE id = $1 AND role = $2',
+        [id, 'admin']
+      );
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error in Admin.findById:', error);
+      throw error;
+    }
   }
 
   static async findByRollNumber(rollNumber) {
@@ -35,7 +40,7 @@ class Admin {
   }
 
   static async findAll(filters = {}) {
-    let sql = 'SELECT id, username, name, email, role, is_active, created_at FROM users WHERE role = $1';
+    let sql = 'SELECT id, roll_number, name, email, role, is_active, created_at, updated_at FROM users WHERE role = $1';
     const params = ['admin'];
     let paramCount = 2;
 
@@ -53,10 +58,10 @@ class Admin {
 
   static async create(adminData) {
     const result = await query(
-      `INSERT INTO users (username, name, email, password, role) 
+      `INSERT INTO users (roll_number, name, email, password, role) 
        VALUES ($1, $2, $3, $4, $5) 
-       RETURNING id, username, name, email, role, created_at`,
-      [adminData.username, adminData.name, adminData.email, adminData.password, 'admin']
+       RETURNING id, roll_number, name, email, role, created_at`,
+      [adminData.rollNumber || adminData.roll_number, adminData.name, adminData.email, adminData.password, 'admin']
     );
     return result.rows[0];
   }
@@ -95,7 +100,7 @@ class Admin {
     const result = await query(
       `UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $${paramCount} AND role = 'admin'
-       RETURNING id, username, name, email, role, is_active`,
+       RETURNING id, roll_number, name, email, role, is_active`,
       params
     );
     return result.rows[0];

@@ -1,5 +1,6 @@
 const express = require('express');
 const {
+  getAllProblems,
   getProblemsByAssignment,
   getProblem,
   getProblemWithSamples,
@@ -32,6 +33,7 @@ router.get('/assignment/:assignmentId', getProblemsByAssignment);
 
 router
   .route('/')
+  .get(isAdmin, getAllProblems)
   .post(isAdmin, createProblemValidator, validate, createProblem);
 
 router

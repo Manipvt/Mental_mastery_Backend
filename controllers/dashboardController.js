@@ -108,6 +108,8 @@ exports.getStudentAssignmentDetails = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/dashboard/admin/stats
 // @access  Private/Admin
 exports.getAdminStats = asyncHandler(async (req, res) => {
+  const { query } = require('../config/db');
+  
   // Get total counts
   const totalAssignments = await Assignment.count();
   const totalStudents = await Student.count();
@@ -117,20 +119,39 @@ exports.getAdminStats = asyncHandler(async (req, res) => {
   const activeAssignments = await Assignment.getActiveAssignments();
   const upcomingAssignments = await Assignment.getUpcomingAssignments();
 
-  // Get recent submissions (last 100)
-  const recentSubmissions = await Submission.findByStudent(null, {});
+  // Get total problems count
+  const problemsResult = await query('SELECT COUNT(*) as count FROM problems');
+  const totalProblems = parseInt(problemsResult.rows[0].count);
+
+  // Get recent submissions with student info (last 10)
+  const recentSubmissionsResult = await query(
+    `SELECT s.*, u.name as student_name, u.roll_number, 
+            p.title as problem_title, a.title as assignment_title
+     FROM submissions s
+     LEFT JOIN users u ON s.user_id = u.id
+     LEFT JOIN problems p ON s.problem_id = p.id
+     LEFT JOIN assignments a ON s.assignment_id = a.id
+     ORDER BY s.submitted_at DESC
+     LIMIT 10`
+  );
+  const recentSubmissions = recentSubmissionsResult.rows;
+
+  // Get all submissions for stats
+  const allSubmissionsResult = await query('SELECT status FROM submissions');
+  const allSubmissions = allSubmissionsResult.rows;
 
   // Calculate submission stats
-  const totalSubmissions = recentSubmissions.length;
-  const acceptedSubmissions = recentSubmissions.filter(
+  const totalSubmissions = allSubmissions.length;
+  const acceptedSubmissions = allSubmissions.filter(
     s => s.status === 'accepted'
   ).length;
-  const pendingSubmissions = recentSubmissions.filter(
+  const pendingSubmissions = allSubmissions.filter(
     s => s.status === 'pending'
   ).length;
 
-  // Get violation stats
-  const recentViolations = await Violation.findByStudent(null);
+  // Get violation stats (all violations)
+  const violationsResult = await query('SELECT COUNT(*) as count FROM violations');
+  const totalViolations = parseInt(violationsResult.rows[0].count);
 
   res.status(200).json({
     success: true,
@@ -138,14 +159,16 @@ exports.getAdminStats = asyncHandler(async (req, res) => {
       totalAssignments,
       activeAssignments: activeAssignments.length,
       upcomingAssignments: upcomingAssignments.length,
+      totalProblems,
       totalStudents,
       activeStudents,
       inactiveStudents: totalStudents - activeStudents,
       totalSubmissions,
       acceptedSubmissions,
       pendingSubmissions,
-      totalViolations: recentViolations.length,
+      totalViolations,
       recentAssignments: [...activeAssignments, ...upcomingAssignments].slice(0, 5),
+      recentSubmissions,
     },
   });
 });
@@ -183,7 +206,7 @@ exports.getAdminAssignmentDashboard = asyncHandler(async (req, res) => {
   };
 
   // Get unique students
-  const uniqueStudents = [...new Set(submissions.map(s => s.student_id))];
+  const uniqueStudents = [...new Set(submissions.map(s => s.user_id))];
 
   // Get leaderboard
   const leaderboard = await Submission.getLeaderboard(assignmentId);
@@ -238,9 +261,9 @@ exports.getProblemStats = asyncHandler(async (req, res) => {
   // Get all submissions for this problem
   const { query } = require('../config/db');
   const submissionsResult = await query(
-    `SELECT s.*, st.roll_number, st.name as student_name
+    `SELECT s.*, u.roll_number, u.name as student_name
      FROM submissions s
-     JOIN students st ON s.student_id = st.id
+     JOIN users u ON s.user_id = u.id
      WHERE s.problem_id = $1
      ORDER BY s.submitted_at DESC`,
     [problemId]
@@ -251,7 +274,7 @@ exports.getProblemStats = asyncHandler(async (req, res) => {
   // Calculate stats
   const stats = {
     totalSubmissions: submissions.length,
-    uniqueStudents: [...new Set(submissions.map(s => s.student_id))].length,
+    uniqueStudents: [...new Set(submissions.map(s => s.user_id))].length,
     accepted: submissions.filter(s => s.status === 'accepted').length,
     wrongAnswer: submissions.filter(s => s.status === 'wrong_answer').length,
     runtimeError: submissions.filter(s => s.status === 'runtime_error').length,
@@ -266,5 +289,154 @@ exports.getProblemStats = asyncHandler(async (req, res) => {
       stats,
       recentSubmissions: submissions.slice(0, 20),
     },
+  });
+});
+
+// @desc    Get user report (student performance report)
+// @route   GET /api/v1/dashboard/admin/user/:studentId/report
+// @access  Private/Admin
+exports.getUserReport = asyncHandler(async (req, res) => {
+  const { query } = require('../config/db');
+  const studentId = req.params.studentId;
+
+  // Get student info
+  const student = await Student.findById(studentId);
+  if (!student) {
+    return res.status(404).json({
+      success: false,
+      message: 'Student not found',
+    });
+  }
+
+  // Get all submissions for this student
+  const submissions = await Submission.findByStudent(studentId);
+  
+  // Get accepted submissions (problems solved)
+  const acceptedSubmissions = submissions.filter(s => s.status === 'accepted');
+  const uniqueSolvedProblems = [...new Set(acceptedSubmissions.map(s => s.problem_id))];
+  
+  // Get all assignments
+  const allAssignments = await Assignment.findAll({ isActive: true });
+  
+  // Calculate assignment completion
+  const assignmentProgress = [];
+  for (const assignment of allAssignments) {
+    const progress = await Submission.getStudentProgress(studentId, assignment.id);
+    const problems = await Problem.findByAssignmentId(assignment.id);
+    const solvedProblems = await Submission.findAcceptedProblemsByStudent(studentId, assignment.id);
+    
+    assignmentProgress.push({
+      assignmentId: assignment.id,
+      title: assignment.title,
+      totalProblems: problems.length,
+      solvedProblems: solvedProblems.length,
+      isCompleted: problems.length > 0 && solvedProblems.length === problems.length,
+      progress: problems.length > 0 ? (solvedProblems.length / problems.length) * 100 : 0,
+      ...progress,
+    });
+  }
+
+  const completedAssignments = assignmentProgress.filter(a => a.isCompleted).length;
+
+  // Get violations
+  const violations = await Violation.findByStudent(studentId);
+  
+  // Group violations by type
+  const violationsByType = violations.reduce((acc, v) => {
+    const type = v.violation_type || 'unknown';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Get violation details with assignment info
+  const violationDetails = violations.map(v => ({
+    id: v.id,
+    type: v.violation_type,
+    description: v.description,
+    severity: v.severity,
+    detectedAt: v.detected_at,
+    assignmentTitle: v.assignment_title,
+    metadata: v.metadata ? (typeof v.metadata === 'string' ? JSON.parse(v.metadata) : v.metadata) : null,
+  }));
+
+  // Calculate statistics
+  const stats = {
+    totalProblemsSolved: uniqueSolvedProblems.length,
+    totalSubmissions: submissions.length,
+    acceptedSubmissions: acceptedSubmissions.length,
+    totalAssignments: allAssignments.length,
+    completedAssignments,
+    totalViolations: violations.length,
+    violationTypes: violationsByType,
+    submissionSuccessRate: submissions.length > 0 
+      ? ((acceptedSubmissions.length / submissions.length) * 100).toFixed(2) 
+      : 0,
+  };
+
+  res.status(200).json({
+    success: true,
+    data: {
+      student: {
+        id: student.id,
+        rollNumber: student.roll_number,
+        name: student.name,
+        email: student.email,
+        isActive: student.is_active,
+      },
+      stats,
+      assignmentProgress,
+      violations: violationDetails,
+      recentSubmissions: submissions.slice(0, 10),
+    },
+  });
+});
+
+// @desc    Get all students with summary stats
+// @route   GET /api/v1/dashboard/admin/students
+// @access  Private/Admin
+exports.getAllStudentsReport = asyncHandler(async (req, res) => {
+  const { query } = require('../config/db');
+  
+  // Get all active students
+  const students = await Student.findAll({ isActive: true });
+  
+  // Get summary stats for each student
+  const studentsWithStats = await Promise.all(
+    students.map(async (student) => {
+      const submissions = await Submission.findByStudent(student.id);
+      const acceptedSubmissions = submissions.filter(s => s.status === 'accepted');
+      const uniqueSolvedProblems = [...new Set(acceptedSubmissions.map(s => s.problem_id))];
+      const violations = await Violation.findByStudent(student.id);
+      
+      // Get assignment completion count
+      const allAssignments = await Assignment.findAll({ isActive: true });
+      let completedCount = 0;
+      for (const assignment of allAssignments) {
+        const solvedProblems = await Submission.findAcceptedProblemsByStudent(student.id, assignment.id);
+        const problems = await Problem.findByAssignmentId(assignment.id);
+        if (problems.length > 0 && solvedProblems.length === problems.length) {
+          completedCount++;
+        }
+      }
+
+      return {
+        id: student.id,
+        rollNumber: student.roll_number,
+        name: student.name,
+        email: student.email,
+        stats: {
+          problemsSolved: uniqueSolvedProblems.length,
+          assignmentsCompleted: completedCount,
+          totalSubmissions: submissions.length,
+          violationsCount: violations.length,
+        },
+      };
+    })
+  );
+
+  res.status(200).json({
+    success: true,
+    count: studentsWithStats.length,
+    data: studentsWithStats,
   });
 });

@@ -5,6 +5,8 @@ const {
   getAdminStats,
   getAdminAssignmentDashboard,
   getProblemStats,
+  getUserReport,
+  getAllStudentsReport,
 } = require('../controllers/dashboardController');
 const { protect } = require('../middlewares/auth');
 const { isAdmin, isStudent } = require('../middlewares/roles');
@@ -22,5 +24,7 @@ router.get('/student/assignment/:assignmentId', isStudent, getStudentAssignmentD
 router.get('/admin/stats', isAdmin, getAdminStats);
 router.get('/admin/assignment/:assignmentId', isAdmin, getAdminAssignmentDashboard);
 router.get('/admin/problem/:problemId', isAdmin, getProblemStats);
+router.get('/admin/user/:studentId/report', isAdmin, getUserReport);
+router.get('/admin/students', isAdmin, getAllStudentsReport);
 
 module.exports = router;

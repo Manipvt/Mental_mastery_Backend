@@ -3,7 +3,7 @@ const { query } = require('../config/db');
 class AssignmentSession {
   static async findByStudentAndAssignment(studentId, assignmentId) {
     const result = await query(
-      'SELECT * FROM assignment_sessions WHERE student_id = $1 AND assignment_id = $2',
+      'SELECT * FROM assignment_sessions WHERE user_id = $1 AND assignment_id = $2',
       [studentId, assignmentId]
     );
     return result.rows[0];
@@ -11,14 +11,12 @@ class AssignmentSession {
 
   static async create(sessionData) {
     const result = await query(
-      `INSERT INTO assignment_sessions (student_id, assignment_id, ip_address, user_agent) 
-       VALUES ($1, $2, $3, $4) 
+      `INSERT INTO assignment_sessions (user_id, assignment_id) 
+       VALUES ($1, $2) 
        RETURNING *`,
       [
-        sessionData.studentId,
-        sessionData.assignmentId,
-        sessionData.ipAddress || null,
-        sessionData.userAgent || null
+        sessionData.studentId || sessionData.userId,
+        sessionData.assignmentId
       ]
     );
     return result.rows[0];
@@ -41,11 +39,6 @@ class AssignmentSession {
       paramCount++;
     }
 
-    if (sessionData.isSubmitted !== undefined) {
-      fields.push(`is_submitted = $${paramCount}`);
-      params.push(sessionData.isSubmitted);
-      paramCount++;
-    }
 
     if (sessionData.violationCount !== undefined) {
       fields.push(`violation_count = $${paramCount}`);
@@ -72,7 +65,7 @@ class AssignmentSession {
     const result = await query(
       `UPDATE assignment_sessions 
        SET violation_count = violation_count + 1 
-       WHERE student_id = $1 AND assignment_id = $2 
+       WHERE user_id = $1 AND assignment_id = $2 
        RETURNING *`,
       [studentId, assignmentId]
     );
@@ -83,7 +76,7 @@ class AssignmentSession {
     const result = await query(
       `UPDATE assignment_sessions 
        SET is_locked = true, ended_at = CURRENT_TIMESTAMP 
-       WHERE student_id = $1 AND assignment_id = $2 
+       WHERE user_id = $1 AND assignment_id = $2 
        RETURNING *`,
       [studentId, assignmentId]
     );
@@ -92,9 +85,9 @@ class AssignmentSession {
 
   static async getActiveSessions(assignmentId) {
     const result = await query(
-      `SELECT ass.*, st.roll_number, st.name as student_name
+      `SELECT ass.*, u.roll_number, u.name as student_name
        FROM assignment_sessions ass
-       JOIN students st ON ass.student_id = st.id
+       JOIN users u ON ass.user_id = u.id
        WHERE ass.assignment_id = $1 
          AND ass.is_locked = false 
          AND ass.ended_at IS NULL
@@ -109,7 +102,6 @@ class AssignmentSession {
       `SELECT 
          COUNT(*) as total_sessions,
          COUNT(CASE WHEN is_locked = true THEN 1 END) as locked_sessions,
-         COUNT(CASE WHEN is_submitted = true THEN 1 END) as submitted_sessions,
          AVG(violation_count) as avg_violations
        FROM assignment_sessions
        WHERE assignment_id = $1`,

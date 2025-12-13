@@ -1,6 +1,19 @@
 const asyncHandler = require('../utils/asyncHandler');
 const problemService = require('../services/problemService');
 
+// @desc    Get all problems
+// @route   GET /api/v1/problems
+// @access  Private/Admin
+exports.getAllProblems = asyncHandler(async (req, res) => {
+  const problems = await problemService.getAllProblems();
+
+  res.status(200).json({
+    success: true,
+    count: problems.length,
+    data: problems,
+  });
+});
+
 // @desc    Get problems by assignment
 // @route   GET /api/v1/problems/assignment/:assignmentId
 // @access  Private

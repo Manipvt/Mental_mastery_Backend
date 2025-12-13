@@ -70,11 +70,44 @@ exports.protect = asyncHandler(async (req, res, next) => {
         req.user.type = 'student';
       }
     } else if (userType === 'admin') {
-      if (decoded.id) {
-        req.user = await Admin.findById(decoded.id);
-      }
-      if (req.user) {
-        req.user.type = 'admin';
+      try {
+        // Try to find admin by ID first
+        if (decoded.id) {
+          req.user = await Admin.findById(decoded.id);
+          logger.debug(
+            'auth: admin lookup by id ' +
+              JSON.stringify({ id: decoded.id, found: !!req.user })
+          );
+        }
+        
+        // Fallback to roll number if ID lookup fails
+        if (!req.user && decoded.rollNumber) {
+          req.user = await Admin.findByRollNumber(decoded.rollNumber);
+          logger.debug(
+            'auth: admin lookup by rollNumber ' +
+              JSON.stringify({
+                rollNumber: decoded.rollNumber,
+                found: !!req.user,
+              })
+          );
+        }
+        
+        if (req.user) {
+          req.user.type = 'admin';
+          // Ensure roll_number is set if missing
+          if (!req.user.roll_number && decoded.rollNumber) {
+            req.user.roll_number = decoded.rollNumber;
+          }
+        }
+      } catch (adminError) {
+        logger.error('auth: admin lookup error', {
+          error: adminError.message,
+          stack: adminError.stack,
+          id: decoded.id,
+          rollNumber: decoded.rollNumber,
+        });
+        // Re-throw to be caught by outer catch
+        throw adminError;
       }
     }
 
@@ -90,12 +123,21 @@ exports.protect = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse('User not found', 404));
     }
 
-    if (!req.user.is_active) {
+    // Check if is_active exists and is true
+    if (req.user.is_active === false || req.user.is_active === 0) {
       return next(new ErrorResponse('Account is deactivated', 403));
     }
 
     next();
   } catch (error) {
+    logger.error('auth: authentication error', {
+      error: error.message,
+      stack: error.stack,
+    });
+    // If it's already an ErrorResponse, pass it through
+    if (error.statusCode) {
+      return next(error);
+    }
     return next(new ErrorResponse('Not authorized to access this route', 401));
   }
 });

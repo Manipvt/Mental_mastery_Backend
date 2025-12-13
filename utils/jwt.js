@@ -32,8 +32,13 @@ const generateStudentToken = (student) => {
 const generateAdminToken = (admin) => {
   return generateToken({
     id: admin.id,
+    rollNumber: admin.roll_number,
+    name: admin.name,
+    email: admin.email,
     username: admin.username,
+    role: 'admin',
     type: 'admin',
+    iat: Math.floor(Date.now() / 1000),
   });
 };
 

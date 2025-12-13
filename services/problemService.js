@@ -5,6 +5,11 @@ const Submission = require('../models/submission');
 const ErrorResponse = require('../utils/errorResponse');
 
 class ProblemService {
+  async getAllProblems() {
+    const problems = await Problem.findAll();
+    return problems;
+  }
+
   async getProblemsByAssignment(assignmentId, studentId = null) {
     const assignment = await Assignment.findById(assignmentId);
     if (!assignment) {

@@ -334,7 +334,7 @@ class SubmissionService {
     }
 
     // If student ID is provided, verify ownership
-    if (studentId && submission.student_id !== studentId) {
+    if (studentId && submission.user_id !== studentId) {
       throw new ErrorResponse('Not authorized to view this submission', 403);
     }
 

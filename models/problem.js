@@ -1,6 +1,23 @@
 const { query } = require('../config/db');
 
 class Problem {
+  static async findAll(filters = {}) {
+    let sql = 'SELECT * FROM problems WHERE 1=1';
+    const params = [];
+    let paramCount = 1;
+
+    if (filters.assignmentId) {
+      sql += ` AND assignment_id = $${paramCount}`;
+      params.push(filters.assignmentId);
+      paramCount++;
+    }
+
+    sql += ' ORDER BY created_at DESC';
+
+    const result = await query(sql, params);
+    return result.rows;
+  }
+
   static async findById(id) {
     const result = await query(
       'SELECT * FROM problems WHERE id = $1',

@@ -99,7 +99,7 @@ class AssignmentService {
     const problems = await Problem.findByAssignmentId(id);
     const submissions = await Submission.findByAssignment(id);
 
-    const uniqueStudents = new Set(submissions.map(s => s.student_id));
+    const uniqueStudents = new Set(submissions.map(s => s.user_id));
     const acceptedSubmissions = submissions.filter(s => s.status === 'accepted');
 
     return {

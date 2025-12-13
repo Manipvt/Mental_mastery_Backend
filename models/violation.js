@@ -3,11 +3,11 @@ const { query } = require('../config/db');
 class Violation {
   static async create(violationData) {
     const result = await query(
-      `INSERT INTO violations (student_id, assignment_id, violation_type, description, severity, metadata) 
+      `INSERT INTO violations (user_id, assignment_id, violation_type, description, severity, metadata) 
        VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
       [
-        violationData.studentId,
+        violationData.studentId || violationData.userId,
         violationData.assignmentId,
         violationData.violationType,
         violationData.description || null,
@@ -22,7 +22,7 @@ class Violation {
     let sql = `SELECT v.*, a.title as assignment_title 
                FROM violations v
                LEFT JOIN assignments a ON v.assignment_id = a.id
-               WHERE v.student_id = $1`;
+               WHERE v.user_id = $1`;
     const params = [studentId];
 
     if (assignmentId) {
@@ -38,9 +38,9 @@ class Violation {
 
   static async findByAssignment(assignmentId) {
     const result = await query(
-      `SELECT v.*, st.roll_number, st.name as student_name
+      `SELECT v.*, u.roll_number, u.name as student_name
        FROM violations v
-       LEFT JOIN students st ON v.student_id = st.id
+       LEFT JOIN users u ON v.user_id = u.id
        WHERE v.assignment_id = $1
        ORDER BY v.detected_at DESC`,
       [assignmentId]
@@ -52,7 +52,7 @@ class Violation {
     const result = await query(
       `SELECT COUNT(*) as count 
        FROM violations 
-       WHERE student_id = $1 AND assignment_id = $2`,
+       WHERE user_id = $1 AND assignment_id = $2`,
       [studentId, assignmentId]
     );
     return parseInt(result.rows[0].count);
@@ -63,7 +63,7 @@ class Violation {
       `SELECT 
          violation_type,
          COUNT(*) as count,
-         COUNT(DISTINCT student_id) as affected_students
+         COUNT(DISTINCT user_id) as affected_students
        FROM violations
        WHERE assignment_id = $1
        GROUP BY violation_type
@@ -76,14 +76,14 @@ class Violation {
   static async getHighRiskStudents(assignmentId, threshold = 3) {
     const result = await query(
       `SELECT 
-         st.roll_number,
-         st.name,
+         u.roll_number,
+         u.name,
          COUNT(v.id) as violation_count,
          MAX(v.detected_at) as last_violation
        FROM violations v
-       JOIN students st ON v.student_id = st.id
+       JOIN users u ON v.user_id = u.id
        WHERE v.assignment_id = $1
-       GROUP BY st.id, st.roll_number, st.name
+       GROUP BY u.id, u.roll_number, u.name
        HAVING COUNT(v.id) >= $2
        ORDER BY violation_count DESC`,
       [assignmentId, threshold]
